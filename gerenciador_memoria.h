@@ -25,6 +25,7 @@ typedef struct {
     int pagina;
     int modificado;
     int referenciado;
+    int ultimo_acesso; // Timestamp da última referência
 } Quadro;
 
 extern Quadro memoria_fisica[NUM_FRAMES];
@@ -32,6 +33,11 @@ extern TabelaPagina processos[NUM_PROCESSOS];
 
 void inicializar_memoria();
 void tratar_page_fault(int processo, int pagina, char tipo_acesso);
+int verificar_page_fault(int processo, int pagina);
+void configurar_working_set(int k);
+int gerenciar_memoria_virtual(int segmento, int sem_id, int rodadas);
+void atualizar_referencias();
+void acessar_pagina(int quadro);
 
 // Algoritmos de substituição
 int substituir_nru(int processo, int pagina, char tipo_acesso);

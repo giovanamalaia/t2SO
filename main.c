@@ -2,12 +2,18 @@
 #include <stdlib.h>
 #include <time.h>
 #include "gerenciador_memoria.h"
+#include "simulador.h"
+
 #include "acessos.h"
+#include <sys/_types/_key_t.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <unistd.h>
 
 
-// Ponteiro para a função de substituição de páginas
-int (*substituir_pagina)(int, int, char);
-
+// Função para imprimir as tabelas de processos
 void imprimir_tabela_processos() {
     printf("\nTabela de Processos:\n");
     for (int p = 0; p < NUM_PROCESSOS; p++) {
@@ -23,11 +29,15 @@ void imprimir_tabela_processos() {
 }
 
 int main() {
+    // Inicializa semente para geração aleatória
     srand(time(NULL));
-    gerar_todos_acessos();
+
+    // Gera arquivos de acesso simulados
+    //gerar_todos_acessos();
+
+    // Inicializa memória e tabelas de página
     inicializar_memoria();
-    inicializar_memoria();
-    
+
     int algoritmo, rodadas;
 
     printf("Escolha o algoritmo de substituição:\n");
@@ -52,45 +62,46 @@ int main() {
             printf("Algoritmo de Substituição: LRU\n");
             break;
         case 4:
+            printf("Informe o valor de k para Working Set: ");
+            int k;
+            scanf("%d", &k);
+            configurar_working_set(k);
             substituir_pagina = substituir_working_set;
-            printf("Algoritmo de Substituição: Working Set (k = 3)\n");
+            printf("Algoritmo de Substituição: Working Set (k = %d)\n", k);
             break;
         default:
             printf("Algoritmo inválido!\n");
             exit(1);
     }
 
-    int total_page_faults = 0;
-
-    for (int i = 0; i < rodadas; i++) {
-        int processo = rand() % NUM_PROCESSOS;
-        int pagina = rand() % NUM_PAGINAS;
-        char tipo_acesso = (rand() % 2 == 0) ? 'R' : 'W';
-
-        printf("Rodada %d: Processo P%d acessa página %d (%c)\n", i + 1, processo + 1, pagina, tipo_acesso);
-
-        // Antes de acessar, verificamos se ocorre page fault
-        int frame_anterior = processos[processo].tabela[pagina].frame;
-        int presente_anterior = processos[processo].tabela[pagina].presente;
-        int modificado_anterior = processos[processo].tabela[pagina].modificado;
-
-        tratar_page_fault(processo, pagina, tipo_acesso);
-
-        if (!presente_anterior) {
-            total_page_faults++;
-            printf("  Page Fault! Px = Processo P%d\n", processo + 1);
-
-            if (frame_anterior != -1 && modificado_anterior) {
-                printf("  Página suja escrita na área de swap.\n");
-            }
-        }
+    // Configuração da memória compartilhada e semáforo
+    key_t chave_memoria = ftok("/tmp", 'M');
+    int segmento = shmget(chave_memoria, TAM_MEMORIA, IPC_CREAT | 0666);
+    if (segmento == -1) {
+        perror("Erro ao criar memória compartilhada");
+        exit(EXIT_FAILURE);
     }
 
-    printf("\nResumo da Simulação:\n");
-    printf("Rodadas executadas: %d\n", rodadas);
-    printf("Total de Page Faults: %d\n", total_page_faults);
+    int sem_id = inicializar_semaforo();
 
-    imprimir_tabela_processos();
+    if (fork() == 0) {
+        // Processo filho: Simulador
+        simular_processos(segmento, sem_id, rodadas);
+        exit(0);
+    } else {
+        // Processo pai: Gerenciador de Memória
+        int total_page_faults = gerenciar_memoria_virtual(segmento, sem_id, rodadas);
+
+        // Limpeza de recursos
+        shmctl(segmento, IPC_RMID, NULL); // Remove memória compartilhada
+        destruir_semaforo(sem_id);       // Remove semáforo
+
+        // Exibição do resumo
+        printf("\nResumo da Simulação:\n");
+        printf("Rodadas executadas: %d\n", rodadas);
+        printf("Total de Page Faults: %d\n", total_page_faults);
+        imprimir_tabela_processos();
+    }
 
     return 0;
 }
