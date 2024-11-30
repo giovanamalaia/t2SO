@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "gerenciador_memoria.h"
+#include "acessos.h"
+
 
 // Ponteiro para a função de substituição de páginas
 int (*substituir_pagina)(int, int, char);
@@ -20,8 +23,11 @@ void imprimir_tabela_processos() {
 }
 
 int main() {
+    srand(time(NULL));
+    gerar_todos_acessos();
     inicializar_memoria();
-
+    inicializar_memoria();
+    
     int algoritmo, rodadas;
 
     printf("Escolha o algoritmo de substituição:\n");

@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include "acessos.h"
 
 void gerar_acessos(const char* nome_arquivo) {
@@ -10,11 +9,9 @@ void gerar_acessos(const char* nome_arquivo) {
         exit(EXIT_FAILURE);
     }
 
-    srand(time(NULL)); // semente para geração aleatória
-
     for (int i = 0; i < 100; i++) {
-        int pagina = rand() % 32; // pag entre 0 e 31
-        char tipo_acesso = (rand() % 2 == 0) ? 'R' : 'W'; // read ou write
+        int pagina = rand() % 32; // Página entre 0 e 31
+        char tipo_acesso = (rand() % 2 == 0) ? 'R' : 'W'; // Leitura ou escrita
         fprintf(arquivo, "%02d %c\n", pagina, tipo_acesso);
     }
 
