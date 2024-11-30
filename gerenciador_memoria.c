@@ -91,7 +91,7 @@ int verificar_page_fault(int processo, int pagina) {
 
 void tratar_page_fault(int processo, int pagina, char tipo_acesso) {
     if (!verificar_page_fault(processo, pagina)) {
-        printf("  Página %d do processo %d já está na memória.\n", pagina, processo);
+        printf("  Página %d do processo %d já está na memória.\n", pagina, processo+1);
         return;
     }
 
@@ -119,7 +119,7 @@ void tratar_page_fault(int processo, int pagina, char tipo_acesso) {
         processos[processo].tabela[pagina].modificado = (tipo_acesso == 'W') ? 1 : 0; // Ajusta na tabela de páginas
         
         acessar_pagina(quadro_vazio);
-        printf("Página %d do processo %d alocada no quadro %d\n", pagina, processo, quadro_vazio);
+        printf("Página %d do processo %d alocada no quadro %d\n", pagina, processo+1, quadro_vazio);
     } else {
         // Substituição de página
         int quadro_a_substituir = substituir_pagina(processo, pagina, tipo_acesso);
@@ -130,7 +130,7 @@ void tratar_page_fault(int processo, int pagina, char tipo_acesso) {
         processos[proc_antigo].tabela[pag_antiga].presente = 0;
 
         if (memoria_fisica[quadro_a_substituir].modificado) {
-            printf("  Página %d do processo %d escrita na área de swap.\n", pag_antiga, proc_antigo);
+            printf("  Página %d do processo %d escrita na área de swap.\n", pag_antiga, proc_antigo+1);
         }
 
         memoria_fisica[quadro_a_substituir].processo = processo;
@@ -145,7 +145,7 @@ void tratar_page_fault(int processo, int pagina, char tipo_acesso) {
 
         acessar_pagina(quadro_a_substituir);
         printf("Página %d do processo %d substituiu página %d do processo %d\n",
-               pagina, processo, pag_antiga, proc_antigo);
+               pagina, processo+1, pag_antiga, proc_antigo+1);
     }
 }
 
@@ -216,6 +216,48 @@ int substituir_lru(int processo, int pagina, char tipo_acesso) {
     return quadro_lru;
 }
 
+int substituir_working_set(int processo, int pagina, char tipo_acesso) {
+    int quadro_a_substituir = -1;
+    int paginas_no_ws = 0;
+
+    printf("\n[DEBUG] Working Set Substituição - Processo %d, Página %d\n", processo+1, pagina);
+
+    // Contar páginas no Working Set do processo
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (memoria_fisica[i].processo == processo) {
+            paginas_no_ws++;
+        }
+    }
+
+    // Se o número de páginas no Working Set for menor que k, nenhuma substituição é necessária
+    if (paginas_no_ws < tamanho_working_set) {
+        printf("[DEBUG] Espaço disponível no Working Set (tamanho atual: %d, limite: %d)\n", paginas_no_ws, tamanho_working_set);
+        return -1; // Nenhuma substituição necessária
+    }
+
+    // Se exceder o limite k, substitua a página mais antiga (FIFO)
+    int tempo_mais_antigo = INT_MAX;
+
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (memoria_fisica[i].processo == processo) {
+            if (memoria_fisica[i].ultimo_acesso < tempo_mais_antigo) {
+                tempo_mais_antigo = memoria_fisica[i].ultimo_acesso;
+                quadro_a_substituir = i;
+            }
+        }
+    }
+
+    printf("[DEBUG] Página fora do Working Set (quadro %d) será substituída\n", quadro_a_substituir);
+    return quadro_a_substituir;
+}
+
+
+
+void acessar_pagina(int quadro) {
+    memoria_fisica[quadro].referenciado = 1;
+    memoria_fisica[quadro].ultimo_acesso = clock(); // Atualiza o tempo atual
+}
+
 // int substituir_working_set(int processo, int pagina, char tipo_acesso) {
 //     int quadro_a_substituir = -1;
 //     for (int i = 0; i < NUM_FRAMES; i++) {
@@ -260,45 +302,3 @@ int substituir_lru(int processo, int pagina, char tipo_acesso) {
 //     }
 //     return quadro_a_substituir;
 // }
-
-int substituir_working_set(int processo, int pagina, char tipo_acesso) {
-    int quadro_a_substituir = -1;
-    int paginas_no_ws = 0;
-
-    printf("\n[DEBUG] Working Set Substituição - Processo %d, Página %d\n", processo, pagina);
-
-    // Contar páginas no Working Set do processo
-    for (int i = 0; i < NUM_FRAMES; i++) {
-        if (memoria_fisica[i].processo == processo) {
-            paginas_no_ws++;
-        }
-    }
-
-    // Se o número de páginas no Working Set for menor que k, nenhuma substituição é necessária
-    if (paginas_no_ws < tamanho_working_set) {
-        printf("[DEBUG] Espaço disponível no Working Set (tamanho atual: %d, limite: %d)\n", paginas_no_ws, tamanho_working_set);
-        return -1; // Nenhuma substituição necessária
-    }
-
-    // Se exceder o limite k, substitua a página mais antiga (FIFO)
-    int tempo_mais_antigo = INT_MAX;
-
-    for (int i = 0; i < NUM_FRAMES; i++) {
-        if (memoria_fisica[i].processo == processo) {
-            if (memoria_fisica[i].ultimo_acesso < tempo_mais_antigo) {
-                tempo_mais_antigo = memoria_fisica[i].ultimo_acesso;
-                quadro_a_substituir = i;
-            }
-        }
-    }
-
-    printf("[DEBUG] Página fora do Working Set (quadro %d) será substituída\n", quadro_a_substituir);
-    return quadro_a_substituir;
-}
-
-
-
-void acessar_pagina(int quadro) {
-    memoria_fisica[quadro].referenciado = 1;
-    memoria_fisica[quadro].ultimo_acesso = clock(); // Atualiza o tempo atual
-}
