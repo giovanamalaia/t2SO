@@ -7,9 +7,6 @@
 #include <sys/shm.h>
 #include <unistd.h>
 #include <time.h>
-
-
-
 #include "gerenciador_memoria.h"
 
 Quadro memoria_fisica[NUM_FRAMES];
@@ -159,54 +156,41 @@ void atualizar_referencias() {
     }
 }
 
-// int substituir_lru(int processo, int pagina, char tipo_acesso) {
-//     int menor_contador = INT_MAX;
-//     int quadro_lru = -1;
 
-//     for (int i = 0; i < NUM_FRAMES; i++) {
-//         if (memoria_fisica[i].referenciado < menor_contador) {
-//             menor_contador = memoria_fisica[i].referenciado;
-//             quadro_lru = i;
-//         }
-//     }
+int substituir_working_set(int processo, int pagina, char tipo_acesso) {
+    int quadro_a_substituir = -1;
+    int paginas_no_ws = 0;
 
-//     return quadro_lru;
-// }
+    printf("\n[DEBUG] Working Set Substituição - Processo %d, Página %d\n", processo+1, pagina);
 
-// int substituir_working_set(int processo, int pagina, char tipo_acesso) {
-//     int quadro_a_substituir = -1;
-//     int paginas_no_ws = 0;
+    // Contar páginas no Working Set do processo
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (memoria_fisica[i].processo == processo) {
+            paginas_no_ws++;
+        }
+    }
 
-//     printf("\n[DEBUG] Working Set Substituição - Processo %d, Página %d\n", processo+1, pagina);
+    // Se o número de páginas no Working Set for menor que k, nenhuma substituição é necessária
+    if (paginas_no_ws < tamanho_working_set) {
+        printf("[DEBUG] Espaço disponível no Working Set (tamanho atual: %d, limite: %d)\n", paginas_no_ws, tamanho_working_set);
+        return -1; // Nenhuma substituição necessária
+    }
 
-//     // Contar páginas no Working Set do processo
-//     for (int i = 0; i < NUM_FRAMES; i++) {
-//         if (memoria_fisica[i].processo == processo) {
-//             paginas_no_ws++;
-//         }
-//     }
+    // Se exceder o limite k, substitua a página mais antiga (FIFO)
+    int tempo_mais_antigo = INT_MAX;
 
-//     // Se o número de páginas no Working Set for menor que k, nenhuma substituição é necessária
-//     if (paginas_no_ws < tamanho_working_set) {
-//         printf("[DEBUG] Espaço disponível no Working Set (tamanho atual: %d, limite: %d)\n", paginas_no_ws, tamanho_working_set);
-//         return -1; // Nenhuma substituição necessária
-//     }
+    for (int i = 0; i < NUM_FRAMES; i++) {
+        if (memoria_fisica[i].processo == processo) {
+            if (memoria_fisica[i].ultimo_acesso < tempo_mais_antigo) {
+                tempo_mais_antigo = memoria_fisica[i].ultimo_acesso;
+                quadro_a_substituir = i;
+            }
+        }
+    }
 
-//     // Se exceder o limite k, substitua a página mais antiga (FIFO)
-//     int tempo_mais_antigo = INT_MAX;
-
-//     for (int i = 0; i < NUM_FRAMES; i++) {
-//         if (memoria_fisica[i].processo == processo) {
-//             if (memoria_fisica[i].ultimo_acesso < tempo_mais_antigo) {
-//                 tempo_mais_antigo = memoria_fisica[i].ultimo_acesso;
-//                 quadro_a_substituir = i;
-//             }
-//         }
-//     }
-
-//     printf("[DEBUG] Página fora do Working Set (quadro %d) será substituída\n", quadro_a_substituir);
-//     return quadro_a_substituir;
-// }
+    printf("[DEBUG] Página fora do Working Set (quadro %d) será substituída\n", quadro_a_substituir);
+    return quadro_a_substituir;
+}
 
 
 
@@ -318,53 +302,5 @@ int substituir_lru(int processo, int pagina, char tipo_acesso) {
 
     return quadro_lru; // Retorna o quadro substituído
 }
-
-#include <stdio.h>
-#include <stdlib.h>
-#include "gerenciador_memoria.h"
-
-// int substituir_working_set(int processo, int pagina, char tipo_acesso) {
-//     WorkingSet* ws = &working_sets[processo]; // Acessa o Working Set do processo atual
-//     int quadro_a_substituir = -1;
-
-//     // Verifica se o número de páginas no Working Set é menor que k
-//     if (ws->tamanho < tamanho_working_set) {
-//         printf("[DEBUG] Working Set não está cheio (tamanho atual: %d, limite: %d)\n", ws->tamanho, tamanho_working_set);
-//         return -1; // Nenhuma substituição necessária
-//     }
-
-//     // Substituir a página mais antiga (FIFO dentro do Working Set)
-//     int pagina_a_remover = ws->paginas[0];
-
-//     // Procura o quadro correspondente à página mais antiga
-//     for (int i = 0; i < NUM_FRAMES; i++) {
-//         if (memoria_fisica[i].processo == processo && memoria_fisica[i].pagina == pagina_a_remover) {
-//             quadro_a_substituir = i;
-//             break;
-//         }
-//     }
-
-//     if (quadro_a_substituir == -1) {
-//         printf("[ERRO] Não foi possível encontrar a página para substituição no Working Set\n");
-//         return -1;
-//     }
-
-//     // Atualiza o Working Set removendo a página mais antiga
-//     for (int i = 1; i < ws->tamanho; i++) {
-//         ws->paginas[i - 1] = ws->paginas[i];
-//     }
-//     ws->tamanho--;
-
-//     // Atualiza a tabela de páginas do processo
-//     processos[processo].tabela[pagina_a_remover].presente = 0;
-
-//     printf("[DEBUG] Página %d do Processo %d removida do quadro %d\n",
-//            pagina_a_remover, processo + 1, quadro_a_substituir);
-
-//     return quadro_a_substituir;
-// }
-
-
-
 
 
