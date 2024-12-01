@@ -28,6 +28,7 @@ typedef struct {
     int ultimo_acesso; // Timestamp da última referência
 } Quadro;
 
+
 extern Quadro memoria_fisica[NUM_FRAMES];
 extern TabelaPagina processos[NUM_PROCESSOS];
 
@@ -44,6 +45,8 @@ int substituir_nru(int processo, int pagina, char tipo_acesso);
 int substituir_segunda_chance(int processo, int pagina, char tipo_acesso);
 int substituir_lru(int processo, int pagina, char tipo_acesso);
 int substituir_working_set(int processo, int pagina, char tipo_acesso);
+void escrever_swap(Quadro quadro);  // Usando 'Quadro' no lugar de 'Pagina'
+
 
 // Ponteiro para o algoritmo de substituição
 extern int (*substituir_pagina)(int, int, char);
