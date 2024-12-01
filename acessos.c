@@ -10,8 +10,8 @@ void gerar_acessos(const char* nome_arquivo) {
     }
 
     for (int i = 0; i < 100; i++) {
-        int pagina = rand() % 32; // Página entre 0 e 31
-        char tipo_acesso = (rand() % 2 == 0) ? 'R' : 'W'; // Leitura ou escrita
+        int pagina = rand() % 32; 
+        char tipo_acesso = (rand() % 2 == 0) ? 'R' : 'W'; 
         fprintf(arquivo, "%02d %c\n", pagina, tipo_acesso);
     }
 

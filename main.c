@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 
-// Função para imprimir as tabelas de processos
 void imprimir_tabela_processos() {
     printf("\nTabela de Processos:\n");
     for (int p = 0; p < NUM_PROCESSOS; p++) {
@@ -29,13 +28,10 @@ void imprimir_tabela_processos() {
 }
 
 int main() {
-    // Inicializa semente para geração aleatória
     srand(time(NULL));
 
-    // Gera arquivos de acesso simulados
     //gerar_todos_acessos();
 
-    // Inicializa memória e tabelas de página
     inicializar_memoria();
 
     int algoritmo, rodadas;
@@ -47,7 +43,6 @@ int main() {
     printf("Número de rodadas: ");
     scanf("%d", &rodadas);
 
-    // Configurar o ponteiro para a função de substituição
     switch (algoritmo) {
         case 1:
             substituir_pagina = substituir_nru;
@@ -74,7 +69,6 @@ int main() {
             exit(1);
     }
 
-    // Configuração da memória compartilhada e semáforo
     key_t chave_memoria = ftok("/tmp", 'M');
     int segmento = shmget(chave_memoria, TAM_MEMORIA, IPC_CREAT | 0666);
     if (segmento == -1) {
@@ -85,18 +79,14 @@ int main() {
     int sem_id = inicializar_semaforo();
 
     if (fork() == 0) {
-        // Processo filho: Simulador
         simular_processos(segmento, sem_id, rodadas);
         exit(0);
     } else {
-        // Processo pai: Gerenciador de Memória
         int total_page_faults = gerenciar_memoria_virtual(segmento, sem_id, rodadas);
 
-        // Limpeza de recursos
-        shmctl(segmento, IPC_RMID, NULL); // Remove memória compartilhada
-        destruir_semaforo(sem_id);       // Remove semáforo
+        shmctl(segmento, IPC_RMID, NULL); 
+        destruir_semaforo(sem_id);       
 
-        // Exibição do resumo
         printf("\nResumo da Simulação:\n");
         printf("Rodadas executadas: %d\n", rodadas);
         printf("Total de Page Faults: %d\n", total_page_faults);
